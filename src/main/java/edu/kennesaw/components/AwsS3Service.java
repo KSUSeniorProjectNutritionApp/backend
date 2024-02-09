@@ -1,10 +1,9 @@
 package edu.kennesaw.components;
 
 
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import edu.kennesaw.DTO.Product;
+import edu.kennesaw.POJO.BrandedProduct;
+import edu.kennesaw.repositories.BrandedProductRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import software.amazon.awssdk.auth.credentials.*;
@@ -13,9 +12,7 @@ import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.*;
 
-import java.io.*;
 import java.util.Scanner;
-import java.util.regex.Pattern;
 
 @Component
 public class AwsS3Service {
@@ -31,21 +28,23 @@ public class AwsS3Service {
         awsCredentialsProvider = StaticCredentialsProvider.create(awsCredentials);
     }
 
-    public void downloadBranded() {
+    public void downloadBranded(BrandedProductRepository brandedProductRepository) {
+
         try (S3Client s3Client = S3Client.builder().credentialsProvider(awsCredentialsProvider).region(Region.US_EAST_1).build();
              ResponseInputStream<GetObjectResponse> inputStream =  s3Client.getObject(GetObjectRequest.builder().bucket(BUCKET).key(BRANDED).build())){
             ObjectMapper objectMapper = new ObjectMapper();
             Scanner scanner = new Scanner(inputStream);
             String json;
-            Product product;
-            while (scanner.hasNextLine()){
+            BrandedProduct brandedProduct;
+            int x = 0;
+            while (scanner.hasNextLine() && x++ < 1){
                 json = scanner.nextLine();
                 if (json.length() < 50) {
                     continue;
                 }
-                product = objectMapper.readValue(json, Product.class);
+                brandedProduct = objectMapper.readValue(json, BrandedProduct.class);
+                brandedProductRepository.save(brandedProduct);
             }
-
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

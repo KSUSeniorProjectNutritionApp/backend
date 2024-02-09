@@ -1,6 +1,7 @@
 package edu.kennesaw;
 
 import edu.kennesaw.components.AwsS3Service;
+import edu.kennesaw.repositories.BrandedProductRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -26,10 +27,14 @@ public class RedNutritionController {
     @Autowired
     AwsS3Service awsS3Service;
 
+    @Autowired
+    BrandedProductRepository brandedProductRepository;
+
     @GetMapping("/updateDatabase")
     @ResponseBody
     public ResponseEntity<String> updateDatabase(Model model) {
-        awsS3Service.downloadBranded();
+        awsS3Service.downloadBranded(brandedProductRepository);
+        System.out.println(brandedProductRepository.findAll().getFirst());
         return new ResponseEntity<>(HttpStatus.OK);
     }
 }
