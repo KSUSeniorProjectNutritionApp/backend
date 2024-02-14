@@ -2,6 +2,8 @@ package edu.kennesaw;
 
 import edu.kennesaw.components.AwsS3Service;
 import edu.kennesaw.repositories.BrandedProductRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -9,17 +11,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
-import org.springframework.web.client.RestClient;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.net.MalformedURLException;
-import java.net.URI;
-import java.net.URL;
-import java.util.zip.GZIPInputStream;
-import java.util.zip.ZipInputStream;
 
 @Controller
 public class RedNutritionController {
@@ -30,11 +22,16 @@ public class RedNutritionController {
     @Autowired
     BrandedProductRepository brandedProductRepository;
 
+    Logger logger = LoggerFactory.getLogger(RedNutritionController.class);
+
     @GetMapping("/updateDatabase")
     @ResponseBody
     public ResponseEntity<String> updateDatabase(Model model) {
+        logger.info("Database update requested");
+        long start = System.nanoTime();
         awsS3Service.downloadBranded(brandedProductRepository);
-        System.out.println(brandedProductRepository.findAll().getFirst());
+        long time = System.nanoTime() - start;
+        logger.info("Database update completed in " + time/1_000_000_000 + " seconds");
         return new ResponseEntity<>(HttpStatus.OK);
     }
 }

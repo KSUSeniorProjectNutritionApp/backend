@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import edu.kennesaw.POJO.BrandedProduct;
 import edu.kennesaw.repositories.BrandedProductRepository;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
 import org.springframework.stereotype.Component;
 import software.amazon.awssdk.auth.credentials.*;
 import software.amazon.awssdk.core.ResponseInputStream;
@@ -36,14 +37,18 @@ public class AwsS3Service {
             Scanner scanner = new Scanner(inputStream);
             String json;
             BrandedProduct brandedProduct;
-            int x = 0;
-            while (scanner.hasNextLine() && x++ < 1){
+            while (scanner.hasNextLine()){
                 json = scanner.nextLine();
                 if (json.length() < 50) {
                     continue;
                 }
-                brandedProduct = objectMapper.readValue(json, BrandedProduct.class);
-                brandedProductRepository.save(brandedProduct);
+                try {
+                    brandedProduct = objectMapper.readValue(json, BrandedProduct.class);
+                    System.out.println(brandedProduct);
+                    brandedProductRepository.save( brandedProduct);
+                } catch (Exception e) {
+                    System.out.println(e);
+                }
             }
         } catch (Exception e) {
             throw new RuntimeException(e);

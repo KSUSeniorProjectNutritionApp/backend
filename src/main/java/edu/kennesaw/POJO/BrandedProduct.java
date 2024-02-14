@@ -2,48 +2,19 @@ package edu.kennesaw.POJO;
 
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
 
 import java.util.List;
 @Entity
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class BrandedProduct {
-    private String foodClass;
-    private String description;
-
-    private List<FoodNutrient> foodNutrients;
+@DiscriminatorValue("branded")
+public class BrandedProduct extends Product{
     private String brandOwner;
-    @Id
     private String gtinUpc;
+    @Column(length = 4096)
     private String ingredients;
     private Integer servingSize;
     private String servingSizeUnit;
-
-
-    public String getFoodClass() {
-        return foodClass;
-    }
-
-    public void setFoodClass(String foodClass) {
-        this.foodClass = foodClass;
-    }
-
-    public String getDescription() {
-        return description;
-    }
-
-    public void setDescription(String description) {
-        this.description = description;
-    }
-
-    public List<FoodNutrient> getFoodNutrients() {
-        return foodNutrients;
-    }
-
-    public void setFoodNutrients(List<FoodNutrient> foodNutrients) {
-        this.foodNutrients = foodNutrients;
-    }
 
     public String getBrandOwner() {
         return brandOwner;
@@ -87,15 +58,12 @@ public class BrandedProduct {
 
     @Override
     public String toString() {
-        return "Product{" +
-                "foodClass='" + foodClass + '\'' +
-                ", description='" + description + '\'' +
-                ", foodNutrients=" + foodNutrients +
-                ", brandOwner='" + brandOwner + '\'' +
+        return "BrandedProduct{" +
+                "brandOwner='" + brandOwner + '\'' +
                 ", gtinUpc='" + gtinUpc + '\'' +
                 ", ingredients='" + ingredients + '\'' +
                 ", servingSize=" + servingSize +
                 ", servingSizeUnit='" + servingSizeUnit + '\'' +
-                '}';
+                "} " + super.toString();
     }
 }

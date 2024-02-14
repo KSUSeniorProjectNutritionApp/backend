@@ -1,11 +1,24 @@
 package edu.kennesaw.POJO;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import jakarta.persistence.*;
 
+@Entity
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class Nutrient {
+
+    @Id
+    private Integer id;
     private String name;
     private String unitName;
+
+    public Integer getId() {
+        return id;
+    }
+
+    public void setId(Integer id) {
+        this.id = id;
+    }
 
     public String getName() {
         return name;
@@ -26,7 +39,8 @@ public class Nutrient {
     @Override
     public String toString() {
         return "Nutrient{" +
-                "name='" + name + '\'' +
+                "id=" + id +
+                ", name='" + name + '\'' +
                 ", unitName='" + unitName + '\'' +
                 '}';
     }
