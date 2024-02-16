@@ -21,7 +21,9 @@ dependencies {
     implementation("org.postgresql:postgresql")
     implementation(platform("software.amazon.awssdk:bom:2.23.16"))
     implementation("software.amazon.awssdk:s3")
-//    implementation("software.amazon.awssdk:sts")
+    implementation(platform("org.hibernate.search:hibernate-search-bom:7.0.0.Final"))
+    implementation("org.hibernate.search:hibernate-search-mapper-orm")
+    implementation("org.hibernate.search:hibernate-search-backend-lucene")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
 }
 

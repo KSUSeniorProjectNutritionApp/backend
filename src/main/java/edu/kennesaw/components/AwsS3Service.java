@@ -3,9 +3,10 @@ package edu.kennesaw.components;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import edu.kennesaw.POJO.BrandedProduct;
+import edu.kennesaw.POJO.RawProduct;
 import edu.kennesaw.repositories.BrandedProductRepository;
+import edu.kennesaw.repositories.RawProductRepository;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
 import org.springframework.stereotype.Component;
 import software.amazon.awssdk.auth.credentials.*;
 import software.amazon.awssdk.core.ResponseInputStream;
@@ -42,13 +43,33 @@ public class AwsS3Service {
                 if (json.length() < 50) {
                     continue;
                 }
-                try {
-                    brandedProduct = objectMapper.readValue(json, BrandedProduct.class);
-                    System.out.println(brandedProduct);
-                    brandedProductRepository.save( brandedProduct);
-                } catch (Exception e) {
-                    System.out.println(e);
+
+                brandedProduct = objectMapper.readValue(json, BrandedProduct.class);
+                brandedProductRepository.save(brandedProduct);
+
+            }
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public void downloadRaw(RawProductRepository rawProductRepository) {
+
+        try (S3Client s3Client = S3Client.builder().credentialsProvider(awsCredentialsProvider).region(Region.US_EAST_1).build();
+             ResponseInputStream<GetObjectResponse> inputStream =  s3Client.getObject(GetObjectRequest.builder().bucket(BUCKET).key(FOUNDATION).build())){
+            ObjectMapper objectMapper = new ObjectMapper();
+            Scanner scanner = new Scanner(inputStream);
+            String json;
+            RawProduct rawProduct;
+            while (scanner.hasNextLine()){
+                json = scanner.nextLine();
+                if (json.length() < 50) {
+                    continue;
                 }
+
+                rawProduct = objectMapper.readValue(json, RawProduct.class);
+                rawProductRepository.save(rawProduct);
+
             }
         } catch (Exception e) {
             throw new RuntimeException(e);

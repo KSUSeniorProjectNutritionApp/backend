@@ -3,12 +3,14 @@ package edu.kennesaw.POJO;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
+import org.hibernate.search.mapper.pojo.mapping.definition.annotation.FullTextField;
 
-import java.util.List;
 @Entity
 @JsonIgnoreProperties(ignoreUnknown = true)
 @DiscriminatorValue("branded")
 public class BrandedProduct extends Product{
+
+    @FullTextField
     private String brandOwner;
     private String gtinUpc;
     @Column(length = 4096)

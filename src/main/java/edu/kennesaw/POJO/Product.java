@@ -1,15 +1,19 @@
 package edu.kennesaw.POJO;
 
 import jakarta.persistence.*;
+import org.hibernate.search.mapper.pojo.mapping.definition.annotation.FullTextField;
+import org.hibernate.search.mapper.pojo.mapping.definition.annotation.Indexed;
 
 import java.util.List;
 
 @Entity
+@Indexed
 @DiscriminatorColumn(name = "type")
 public abstract class Product {
     @Id
     private Integer fdcId;
     @Column(length = 2048)
+    @FullTextField
     private String description;
     @OneToMany(cascade = CascadeType.ALL)
     @JoinColumn(name="product_id", referencedColumnName = "fdcId")
