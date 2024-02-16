@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import edu.kennesaw.converters.RawProductConverter;
 import jakarta.persistence.DiscriminatorValue;
 import jakarta.persistence.Entity;
+import jakarta.persistence.Transient;
 import org.hibernate.search.mapper.pojo.mapping.definition.annotation.FullTextField;
 
 @Entity
@@ -15,7 +16,8 @@ import org.hibernate.search.mapper.pojo.mapping.definition.annotation.FullTextFi
 public class RawProduct extends Product{
 
     @JsonIgnore
-    private transient FoodCategory foodCategory;
+    @Transient
+    private FoodCategory foodCategory;
 
     @FullTextField
     private String category;

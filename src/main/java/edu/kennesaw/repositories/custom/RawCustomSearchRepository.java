@@ -1,4 +1,4 @@
-package edu.kennesaw.repositories;
+package edu.kennesaw.repositories.custom;
 
 import edu.kennesaw.POJO.RawProduct;
 import edu.kennesaw.records.Query;
