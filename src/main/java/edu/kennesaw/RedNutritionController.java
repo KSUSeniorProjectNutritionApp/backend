@@ -9,10 +9,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+
+import javax.print.attribute.standard.Media;
+import java.util.List;
 
 
 @Controller
@@ -40,10 +44,10 @@ public class RedNutritionController {
         return new ResponseEntity<>(HttpStatus.OK);
     }
 
-    @PostMapping("/query")
+    @PostMapping(value = "/query", consumes = {MediaType.APPLICATION_JSON_VALUE})
     @ResponseBody
-    public ResponseEntity<? extends Product> query(Model model, @ModelAttribute("query") Query query) {
-
+    public  List<? extends Product> query(@RequestBody Query query) {
+        return rawProductRepository.search(query);
     }
 
 }
