@@ -16,6 +16,7 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
 import javax.print.attribute.standard.Media;
+import java.util.ArrayList;
 import java.util.List;
 
 
@@ -47,7 +48,9 @@ public class RedNutritionController {
     @PostMapping(value = "/query", consumes = {MediaType.APPLICATION_JSON_VALUE})
     @ResponseBody
     public  List<? extends Product> query(@RequestBody Query query) {
-        return rawProductRepository.search(query);
+        List<Product> products = new ArrayList<>(rawProductRepository.search(query));
+        products.addAll(brandedProductRepository.search(query));
+        return products;
     }
 
 }
