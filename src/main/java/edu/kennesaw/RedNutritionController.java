@@ -15,6 +15,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -36,31 +37,29 @@ public class RedNutritionController {
     Logger logger = LoggerFactory.getLogger(RedNutritionController.class);
 
     @GetMapping("/updateDatabase")
-    @ResponseBody
-    public ResponseEntity<String> updateDatabase() {
+    public void updateDatabase() {
         logger.info("Database update requested");
         long start = System.nanoTime();
         awsS3Service.downloadRaw(rawProductRepository);
         long time = System.nanoTime() - start;
         logger.info("Database update completed in " + time/1_000_000_000 + " seconds");
-        return new ResponseEntity<>(HttpStatus.OK);
     }
 
     @PostMapping(value = "/query", consumes = {MediaType.APPLICATION_JSON_VALUE})
     @ResponseBody
-    public  ResponseEntity<List<? extends Product>> query(@RequestBody Query query) {
+    public  List<? extends Product> query(@RequestBody Query query) {
         List<Product> products = new ArrayList<>(rawProductRepository.search(query));
         products.addAll(brandedProductRepository.search(query));
-        return ResponseEntity.of(Optional.of(products));
+        return products;
     }
 
     @PostMapping(value = "/barcode", consumes = {MediaType.APPLICATION_JSON_VALUE})
     @ResponseBody
-    public ResponseEntity<BrandedProduct> query(@RequestBody Barcode barcode) {
+    public BrandedProduct query(@RequestBody Barcode barcode) {
         logger.info("Requested product with barcode: " + barcode.barcode());
         Optional<BrandedProduct> brandedProductOptional = brandedProductRepository.findByGtinUpc(barcode.barcode());
         logger.info("Barcode {} was {}", barcode.barcode(), brandedProductOptional.isPresent() ? "found" : "not found");
-        return ResponseEntity.of(brandedProductOptional);
+        return brandedProductOptional.orElseThrow();
     }
 
 }
