@@ -11,6 +11,12 @@ java {
     sourceCompatibility = JavaVersion.VERSION_21
 }
 
+tasks.bootBuildImage {
+    createdDate = "now"
+    imageName="452350997852.dkr.ecr.us-east-2.amazonaws.com/senior_project"
+
+}
+
 repositories {
     mavenCentral()
 }
