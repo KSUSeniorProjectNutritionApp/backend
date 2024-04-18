@@ -6,6 +6,7 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update
+      search.backend.directory.root: /mnt/efs
 aws:
   s3:
     key: ${S3_KEY}
