@@ -1,7 +1,7 @@
 package edu.kennesaw.POJO;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import edu.kennesaw.converters.RawProductConverter;
 import jakarta.persistence.DiscriminatorValue;
@@ -15,7 +15,7 @@ import org.hibernate.search.mapper.pojo.mapping.definition.annotation.FullTextFi
 @JsonDeserialize(converter = RawProductConverter.class)
 public class RawProduct extends Product{
 
-    @JsonIgnore
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     @Transient
     private FoodCategory foodCategory;
 
