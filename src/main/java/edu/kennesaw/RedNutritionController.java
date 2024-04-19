@@ -36,6 +36,13 @@ public class RedNutritionController {
 
     Logger logger = LoggerFactory.getLogger(RedNutritionController.class);
 
+
+    @GetMapping("/")
+    public String index() {
+        logger.info("healthy");
+        return "healthy";
+    }
+
     @GetMapping("/updateDatabase")
     public void updateDatabase() {
         logger.info("Database update requested");
