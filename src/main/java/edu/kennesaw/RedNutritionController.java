@@ -22,7 +22,7 @@ import java.util.List;
 import java.util.Optional;
 
 
-@Controller
+@RestController
 public class RedNutritionController {
 
     @Autowired
@@ -38,7 +38,6 @@ public class RedNutritionController {
 
 
     @GetMapping("/")
-    @ResponseBody
     public String index() {
         logger.info("healthy");
         return "healthy";
@@ -63,7 +62,6 @@ public class RedNutritionController {
     }
 
     @PostMapping(value = "/query", consumes = {MediaType.APPLICATION_JSON_VALUE})
-    @ResponseBody
     public  List<? extends Product> query(@RequestBody Query query) {
         List<Product> products = new ArrayList<>(rawProductRepository.search(query));
         products.addAll(brandedProductRepository.search(query));
@@ -71,7 +69,6 @@ public class RedNutritionController {
     }
 
     @PostMapping(value = "/barcode", consumes = {MediaType.APPLICATION_JSON_VALUE})
-    @ResponseBody
     public BrandedProduct query(@RequestBody Barcode barcode) {
         logger.info("Requested product with barcode: {}", barcode.barcode());
         Optional<BrandedProduct> brandedProductOptional = brandedProductRepository.findByGtinUpc(barcode.barcode());
