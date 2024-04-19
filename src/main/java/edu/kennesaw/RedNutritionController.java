@@ -44,13 +44,22 @@ public class RedNutritionController {
         return "healthy";
     }
 
-    @GetMapping("/updateDatabase")
-    public void updateDatabase() {
-        logger.info("Database update requested");
+    @PostMapping("/updateRawDatabase")
+    public void updateRawDatabase() {
+        logger.info("Raw database update requested");
         long start = System.nanoTime();
         awsS3Service.downloadRaw(rawProductRepository);
         long time = System.nanoTime() - start;
-        logger.info("Database update completed in " + time/1_000_000_000 + " seconds");
+        logger.info("Raw database update completed in {} seconds", time / 1_000_000_000);
+    }
+
+    @PostMapping("/updateBrandedDatabase")
+    public void updateBrandedDatabase() {
+        logger.info("Branded database update requested");
+        long start = System.nanoTime();
+        awsS3Service.downloadBranded(brandedProductRepository);
+        long time = System.nanoTime() - start;
+        logger.info("Branded database update completed in {} seconds", time / 1_000_000_000);
     }
 
     @PostMapping(value = "/query", consumes = {MediaType.APPLICATION_JSON_VALUE})
@@ -64,7 +73,7 @@ public class RedNutritionController {
     @PostMapping(value = "/barcode", consumes = {MediaType.APPLICATION_JSON_VALUE})
     @ResponseBody
     public BrandedProduct query(@RequestBody Barcode barcode) {
-        logger.info("Requested product with barcode: " + barcode.barcode());
+        logger.info("Requested product with barcode: {}", barcode.barcode());
         Optional<BrandedProduct> brandedProductOptional = brandedProductRepository.findByGtinUpc(barcode.barcode());
         logger.info("Barcode {} was {}", barcode.barcode(), brandedProductOptional.isPresent() ? "found" : "not found");
         return brandedProductOptional.orElseThrow();
