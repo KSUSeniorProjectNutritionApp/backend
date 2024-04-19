@@ -15,6 +15,7 @@ import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.*;
 
 import java.util.Scanner;
+import java.util.concurrent.Semaphore;
 
 @Component
 public class AwsS3Service {
@@ -30,7 +31,7 @@ public class AwsS3Service {
         awsCredentialsProvider = StaticCredentialsProvider.create(awsCredentials);
     }
 
-    public void downloadBranded(BrandedProductRepository brandedProductRepository) {
+    public void downloadBranded(BrandedProductRepository brandedProductRepository, Semaphore semaphore) throws InterruptedException {
 
         try (S3Client s3Client = S3Client.builder().credentialsProvider(awsCredentialsProvider).region(Region.US_EAST_1).build();
              ResponseInputStream<GetObjectResponse> inputStream =  s3Client.getObject(GetObjectRequest.builder().bucket(BUCKET).key(BRANDED).build())){
@@ -45,15 +46,19 @@ public class AwsS3Service {
                 }
 
                 brandedProduct = objectMapper.readValue(json, BrandedProduct.class);
+                semaphore.acquire();
                 brandedProductRepository.save(brandedProduct);
+                semaphore.release();
 
             }
+        } catch (InterruptedException e) {
+            throw e;
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
     }
 
-    public void downloadRaw(RawProductRepository rawProductRepository) {
+    public void downloadRaw(RawProductRepository rawProductRepository, Semaphore semaphore) throws InterruptedException {
 
         try (S3Client s3Client = S3Client.builder().credentialsProvider(awsCredentialsProvider).region(Region.US_EAST_1).build();
              ResponseInputStream<GetObjectResponse> inputStream =  s3Client.getObject(GetObjectRequest.builder().bucket(BUCKET).key(FOUNDATION).build())){
@@ -68,9 +73,13 @@ public class AwsS3Service {
                 }
 
                 rawProduct = objectMapper.readValue(json, RawProduct.class);
+                semaphore.acquire();
                 rawProductRepository.save(rawProduct);
+                semaphore.release();
 
             }
+        } catch (InterruptedException e) {
+            throw e;
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

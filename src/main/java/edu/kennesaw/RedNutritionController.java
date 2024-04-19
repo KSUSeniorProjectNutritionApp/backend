@@ -20,10 +20,14 @@ import org.springframework.web.server.ResponseStatusException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.Semaphore;
 
 
 @RestController
 public class RedNutritionController {
+
+    Semaphore rawSemaphore = new Semaphore(1, true);
+    Semaphore brandedSemaphore = new Semaphore(1, true);
 
     @Autowired
     AwsS3Service awsS3Service;
@@ -44,34 +48,40 @@ public class RedNutritionController {
     }
 
     @PostMapping("/updateRawDatabase")
-    public void updateRawDatabase() {
+    public void updateRawDatabase() throws InterruptedException {
         logger.info("Raw database update requested");
         long start = System.nanoTime();
-        awsS3Service.downloadRaw(rawProductRepository);
+        awsS3Service.downloadRaw(rawProductRepository, rawSemaphore);
         long time = System.nanoTime() - start;
         logger.info("Raw database update completed in {} seconds", time / 1_000_000_000);
     }
 
     @PostMapping("/updateBrandedDatabase")
-    public void updateBrandedDatabase() {
+    public void updateBrandedDatabase() throws InterruptedException {
         logger.info("Branded database update requested");
         long start = System.nanoTime();
-        awsS3Service.downloadBranded(brandedProductRepository);
+        awsS3Service.downloadBranded(brandedProductRepository, brandedSemaphore);
         long time = System.nanoTime() - start;
         logger.info("Branded database update completed in {} seconds", time / 1_000_000_000);
     }
 
     @PostMapping(value = "/query", consumes = {MediaType.APPLICATION_JSON_VALUE})
-    public  List<? extends Product> query(@RequestBody Query query) {
+    public  List<? extends Product> query(@RequestBody Query query) throws InterruptedException {
+        rawSemaphore.acquire();
         List<Product> products = new ArrayList<>(rawProductRepository.search(query));
+        rawSemaphore.release();
+        brandedSemaphore.acquire();
         products.addAll(brandedProductRepository.search(query));
+        brandedSemaphore.release();
         return products;
     }
 
     @PostMapping(value = "/barcode", consumes = {MediaType.APPLICATION_JSON_VALUE})
-    public BrandedProduct query(@RequestBody Barcode barcode) {
+    public BrandedProduct query(@RequestBody Barcode barcode) throws InterruptedException {
         logger.info("Requested product with barcode: {}", barcode.barcode());
+        brandedSemaphore.acquire();
         Optional<BrandedProduct> brandedProductOptional = brandedProductRepository.findByGtinUpc(barcode.barcode());
+        brandedSemaphore.release();
         logger.info("Barcode {} was {}", barcode.barcode(), brandedProductOptional.isPresent() ? "found" : "not found");
         return brandedProductOptional.orElseThrow();
     }
