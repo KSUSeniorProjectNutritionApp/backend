@@ -38,6 +38,7 @@ public class RedNutritionController {
 
 
     @GetMapping("/")
+    @ResponseBody
     public String index() {
         logger.info("healthy");
         return "healthy";

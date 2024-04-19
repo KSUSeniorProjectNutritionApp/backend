@@ -2,14 +2,14 @@
 #  level:
 #    root: TRACE
 spring:
+  profiles.active: ${PROFILE}
   datasource:
     url: ${DB_URL}
     username: ${DB_USER}
     password: ${DB_PASSWORD}
   jpa:
     hibernate:
-      ddl-auto: update
-    properties.hibernate.search.backend.directory.root: /mnt/efs
+      ddl-auto: ${DDL}
 aws:
   s3:
     key: ${S3_KEY}
