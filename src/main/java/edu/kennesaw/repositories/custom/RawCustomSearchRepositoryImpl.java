@@ -2,7 +2,6 @@ package edu.kennesaw.repositories.custom;
 
 import edu.kennesaw.POJO.RawProduct;
 import edu.kennesaw.records.Query;
-import edu.kennesaw.repositories.custom.RawCustomSearchRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.hibernate.search.mapper.orm.Search;
