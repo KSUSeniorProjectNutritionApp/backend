@@ -64,12 +64,15 @@ public class RedNutritionController {
 
     @PostMapping(value = "/query", consumes = {MediaType.APPLICATION_JSON_VALUE})
     public  List<? extends Product> query(@RequestBody Query query) throws InterruptedException {
+        logger.info("Requested product with keywords: {}", query.keywords());
         rawSemaphore.acquire();
         List<Product> products = new ArrayList<>(rawProductRepository.search(query));
         rawSemaphore.release();
+        logger.info("Found {} raw products with keywords: {}", products.size(), query.keywords());
         brandedSemaphore.acquire();
         products.addAll(brandedProductRepository.search(query));
         brandedSemaphore.release();
+        logger.info("Found {} total products with keywords: {}", products.size(), query.keywords());
         return products;
     }
 
