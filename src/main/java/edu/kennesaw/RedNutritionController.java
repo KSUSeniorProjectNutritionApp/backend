@@ -44,7 +44,13 @@ public class RedNutritionController {
         return "healthy";
     }
 
-    @PostMapping("/updateRawDatabase")
+    @PostMapping("/updateDatabase")
+    public void updateDatabase() throws InterruptedException {
+        updateRawDatabase();
+        updateBrandedDatabase();
+    }
+
+//    @PostMapping("/updateRawDatabase")
     public void updateRawDatabase() throws InterruptedException {
         logger.info("Raw database update requested");
         long start = System.nanoTime();
@@ -53,7 +59,7 @@ public class RedNutritionController {
         logger.info("Raw database update completed in {} seconds", time / 1_000_000_000);
     }
 
-    @PostMapping("/updateBrandedDatabase")
+//    @PostMapping("/updateBrandedDatabase")
     public void updateBrandedDatabase() throws InterruptedException {
         logger.info("Branded database update requested");
         long start = System.nanoTime();
