@@ -40,7 +40,7 @@ public class RedNutritionController {
 
     @GetMapping("/")
     public String index() {
-        logger.info("healthy");
+        logger.debug("healthy");
         return "healthy";
     }
 
