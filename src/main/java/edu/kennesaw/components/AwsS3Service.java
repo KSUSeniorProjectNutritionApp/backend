@@ -1,11 +1,14 @@
 package edu.kennesaw.components;
 
 
+import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import edu.kennesaw.POJO.BrandedProduct;
 import edu.kennesaw.POJO.RawProduct;
 import edu.kennesaw.repositories.BrandedProductRepository;
 import edu.kennesaw.repositories.RawProductRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import software.amazon.awssdk.auth.credentials.*;
@@ -25,6 +28,8 @@ public class AwsS3Service {
 
     private AwsCredentials awsCredentials;
     private AwsCredentialsProvider awsCredentialsProvider;
+    private Logger logger = LoggerFactory.getLogger(AwsS3Service.class);
+
 
     public AwsS3Service(@Value("${aws.s3.key}") String key, @Value("${aws.s3.secret}") String secret) {
         awsCredentials = AwsBasicCredentials.create(key, secret);
@@ -38,14 +43,18 @@ public class AwsS3Service {
             ObjectMapper objectMapper = new ObjectMapper();
             Scanner scanner = new Scanner(inputStream);
             String json;
-            BrandedProduct brandedProduct;
+            BrandedProduct brandedProduct = null;
+
             while (scanner.hasNextLine()){
                 json = scanner.nextLine();
                 if (json.length() < 50) {
                     continue;
                 }
-
-                brandedProduct = objectMapper.readValue(json, BrandedProduct.class);
+                try {
+                    brandedProduct = objectMapper.readValue(json, BrandedProduct.class);
+                } catch(JsonParseException jsonParseException) {
+                    logger.warn("Unable to parse line {}", json);
+                }
                 semaphore.acquire();
                 brandedProductRepository.save(brandedProduct);
                 semaphore.release();
@@ -65,14 +74,17 @@ public class AwsS3Service {
             ObjectMapper objectMapper = new ObjectMapper();
             Scanner scanner = new Scanner(inputStream);
             String json;
-            RawProduct rawProduct;
+            RawProduct rawProduct = null;
             while (scanner.hasNextLine()){
                 json = scanner.nextLine();
                 if (json.length() < 50) {
                     continue;
                 }
-
-                rawProduct = objectMapper.readValue(json, RawProduct.class);
+                try {
+                    rawProduct = objectMapper.readValue(json, RawProduct.class);
+                } catch (JsonParseException jsonParseException) {
+                    logger.warn("Unable to parse line {}", json);
+                }
                 semaphore.acquire();
                 rawProductRepository.save(rawProduct);
                 semaphore.release();

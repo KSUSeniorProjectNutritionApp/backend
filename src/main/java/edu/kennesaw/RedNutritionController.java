@@ -3,6 +3,7 @@ package edu.kennesaw;
 import edu.kennesaw.POJO.BrandedProduct;
 import edu.kennesaw.POJO.Product;
 import edu.kennesaw.components.AwsS3Service;
+import edu.kennesaw.components.StartupService;
 import edu.kennesaw.records.Barcode;
 import edu.kennesaw.records.Query;
 import edu.kennesaw.repositories.BrandedProductRepository;
@@ -24,6 +25,9 @@ public class RedNutritionController {
 
     Semaphore rawSemaphore = new Semaphore(1, true);
     Semaphore brandedSemaphore = new Semaphore(1, true);
+
+    @Autowired
+    StartupService startupService;
 
 
     @Autowired
