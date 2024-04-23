@@ -12,6 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
@@ -87,13 +88,13 @@ public class RedNutritionController {
     }
 
     @PostMapping(value = "/barcode", consumes = {MediaType.APPLICATION_JSON_VALUE})
-    public BrandedProduct query(@RequestBody Barcode barcode) throws InterruptedException {
+    public ResponseEntity<BrandedProduct> query(@RequestBody Barcode barcode) throws InterruptedException {
         logger.info("Requested product with barcode: {}", barcode.barcode());
         brandedSemaphore.acquire();
         Optional<BrandedProduct> brandedProductOptional = brandedProductRepository.findByGtinUpc(barcode.barcode());
         brandedSemaphore.release();
         logger.info("Barcode {} was {}", barcode.barcode(), brandedProductOptional.isPresent() ? "found" : "not found");
-        return brandedProductOptional.orElseThrow();
+        return ResponseEntity.of(brandedProductOptional);
     }
 
 }

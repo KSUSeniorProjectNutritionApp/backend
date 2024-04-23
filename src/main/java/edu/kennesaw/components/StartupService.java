@@ -18,7 +18,7 @@ public class StartupService {
     private String workspace;
 
 
-    Logger logger = LoggerFactory.getLogger(StartupService.class);
+    private Logger logger = LoggerFactory.getLogger(StartupService.class);
 
 
     @EventListener(ApplicationReadyEvent.class)
@@ -28,7 +28,6 @@ public class StartupService {
     }
     private void removeLock(String file) throws IOException {
         Path path = Paths.get(file);
-        System.out.println(path);
         if (Files.exists(path)) {
             logger.info("{} exists", path);
             Files.delete(path);
