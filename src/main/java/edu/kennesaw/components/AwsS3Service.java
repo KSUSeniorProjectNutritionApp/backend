@@ -23,7 +23,7 @@ import java.util.concurrent.Semaphore;
 @Component
 public class AwsS3Service {
     private static final String BUCKET = "rednutritionbucket";
-    private static final String BRANDED = "brandedDownload.json";
+    private static final String BRANDED = "branded/";
     private static final String FOUNDATION = "foundationDownload.json";
 
     private AwsCredentials awsCredentials;
@@ -36,15 +36,30 @@ public class AwsS3Service {
         awsCredentialsProvider = StaticCredentialsProvider.create(awsCredentials);
     }
 
+
     public void downloadBranded(BrandedProductRepository brandedProductRepository, Semaphore semaphore) throws InterruptedException {
 
-        try (S3Client s3Client = S3Client.builder().credentialsProvider(awsCredentialsProvider).region(Region.US_EAST_1).build();
-             ResponseInputStream<GetObjectResponse> inputStream =  s3Client.getObject(GetObjectRequest.builder().bucket(BUCKET).key(BRANDED).build())){
+        try(S3Client s3Client = S3Client.builder().credentialsProvider(awsCredentialsProvider).region(Region.US_EAST_1).build()) {
+            ListObjectsV2Response listObjectsV2Response = s3Client.listObjectsV2(ListObjectsV2Request.builder().bucket(BUCKET).prefix(BRANDED).build());
+            for( S3Object s3Object: listObjectsV2Response.contents()) {
+                if(s3Object.key().equals(BRANDED)) {
+                    logger.info("Skipping directory prefix {}", s3Object.key());
+                } else {
+                    logger.info("Processing file {}", s3Object.key());
+                }
+                downloadBrandedPart(s3Client, s3Object, brandedProductRepository, semaphore);
+            }
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private void downloadBrandedPart(S3Client s3Client, S3Object s3Object, BrandedProductRepository brandedProductRepository, Semaphore semaphore) throws InterruptedException {
+        try (ResponseInputStream<GetObjectResponse> inputStream =  s3Client.getObject(GetObjectRequest.builder().bucket(BUCKET).key(s3Object.key()).build())){
             ObjectMapper objectMapper = new ObjectMapper();
             Scanner scanner = new Scanner(inputStream);
             String json;
             BrandedProduct brandedProduct = null;
-
             while (scanner.hasNextLine()){
                 json = scanner.nextLine();
                 if (json.length() < 50) {
@@ -54,6 +69,7 @@ public class AwsS3Service {
                     brandedProduct = objectMapper.readValue(json, BrandedProduct.class);
                 } catch(JsonParseException jsonParseException) {
                     logger.warn("Unable to parse line {}", json);
+                    continue;
                 }
                 semaphore.acquire();
                 brandedProductRepository.save(brandedProduct);
@@ -84,6 +100,7 @@ public class AwsS3Service {
                     rawProduct = objectMapper.readValue(json, RawProduct.class);
                 } catch (JsonParseException jsonParseException) {
                     logger.warn("Unable to parse line {}", json);
+                    continue;
                 }
                 semaphore.acquire();
                 rawProductRepository.save(rawProduct);
