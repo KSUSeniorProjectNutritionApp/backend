@@ -18,11 +18,10 @@ import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.*;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
-import java.util.concurrent.Semaphore;
 import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 @Component
 public class AwsS3Service {
@@ -42,7 +41,6 @@ public class AwsS3Service {
 
     @Async
     public void downloadBranded(BrandedProductRepository brandedProductRepository, Lock lock, Integer position) {
-
         try(S3Client s3Client = S3Client.builder().credentialsProvider(awsCredentialsProvider).region(Region.US_EAST_1).build()) {
             ListObjectsV2Response listObjectsV2Response = s3Client.listObjectsV2(ListObjectsV2Request.builder().bucket(BUCKET).prefix(BRANDED).build());
             List<S3Object> s3Objects = listObjectsV2Response.contents();
@@ -62,35 +60,45 @@ public class AwsS3Service {
     }
 
     private void downloadBrandedPart(S3Client s3Client, S3Object s3Object, BrandedProductRepository brandedProductRepository, Lock lock) throws InterruptedException {
+        List<BrandedProduct> brandedProducts = new ArrayList<>();
         try (ResponseInputStream<GetObjectResponse> inputStream =  s3Client.getObject(GetObjectRequest.builder().bucket(BUCKET).key(s3Object.key()).build())){
             ObjectMapper objectMapper = new ObjectMapper();
             Scanner scanner = new Scanner(inputStream);
             String json;
             BrandedProduct brandedProduct = null;
-            while (scanner.hasNextLine()){
+            while (scanner.hasNextLine()) {
                 json = scanner.nextLine();
                 if (json.length() < 50) {
                     continue;
                 }
                 try {
                     brandedProduct = objectMapper.readValue(json, BrandedProduct.class);
-                } catch(JsonParseException jsonParseException) {
+                } catch (JsonParseException jsonParseException) {
                     logger.warn("Unable to parse line {}", json);
                     continue;
                 }
+                brandedProducts.add(brandedProduct);
+                if (brandedProducts.size() < 10) {
+                    continue;
+                }
                 lock.lock();
-                brandedProductRepository.save(brandedProduct);
+                brandedProductRepository.saveAll(brandedProducts);
                 lock.unlock();
+                brandedProducts.clear();
 
             }
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+        lock.lock();
+        brandedProductRepository.saveAll(brandedProducts);
+        lock.unlock();
         logger.info("Successfully processed {}", s3Object.key());
-
     }
+
     @Async
     public void downloadRaw(RawProductRepository rawProductRepository, Lock lock) throws InterruptedException {
+        List<RawProduct> rawProducts = new ArrayList<>();
 
         try (S3Client s3Client = S3Client.builder().credentialsProvider(awsCredentialsProvider).region(Region.US_EAST_1).build();
              ResponseInputStream<GetObjectResponse> inputStream =  s3Client.getObject(GetObjectRequest.builder().bucket(BUCKET).key(FOUNDATION).build())){
@@ -109,15 +117,22 @@ public class AwsS3Service {
                     logger.warn("Unable to parse line {}", json);
                     continue;
                 }
+                if(rawProducts.size() < 10) {
+                    rawProducts.add(rawProduct);
+                }
                 lock.lock();
-                rawProductRepository.save(rawProduct);
+                rawProductRepository.saveAll(rawProducts);
                 lock.unlock();
+                rawProducts.clear();
 
             }
         } catch (Exception e) {
             logger.warn("Failed to finish update raw database");
             throw new RuntimeException(e);
         }
+        lock.lock();
+        rawProductRepository.saveAll(rawProducts);
+        lock.unlock();
         logger.info("Successfully updated raw database");
     }
 
