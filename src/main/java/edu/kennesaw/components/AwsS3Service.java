@@ -10,6 +10,7 @@ import edu.kennesaw.repositories.RawProductRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import software.amazon.awssdk.auth.credentials.*;
 import software.amazon.awssdk.core.ResponseInputStream;
@@ -17,8 +18,11 @@ import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.*;
 
+import java.util.List;
 import java.util.Scanner;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 @Component
 public class AwsS3Service {
@@ -36,25 +40,28 @@ public class AwsS3Service {
         awsCredentialsProvider = StaticCredentialsProvider.create(awsCredentials);
     }
 
-
-    public void downloadBranded(BrandedProductRepository brandedProductRepository, Semaphore semaphore) throws InterruptedException {
+    @Async
+    public void downloadBranded(BrandedProductRepository brandedProductRepository, Lock lock, Integer position) {
 
         try(S3Client s3Client = S3Client.builder().credentialsProvider(awsCredentialsProvider).region(Region.US_EAST_1).build()) {
             ListObjectsV2Response listObjectsV2Response = s3Client.listObjectsV2(ListObjectsV2Request.builder().bucket(BUCKET).prefix(BRANDED).build());
-            for( S3Object s3Object: listObjectsV2Response.contents()) {
+            List<S3Object> s3Objects = listObjectsV2Response.contents();
+            S3Object s3Object;
+            for(; position <= s3Objects.size(); position++){
+                s3Object = s3Objects.get(position);
                 if(s3Object.key().equals(BRANDED)) {
                     logger.info("Skipping directory prefix {}", s3Object.key());
                 } else {
                     logger.info("Processing file {}", s3Object.key());
                 }
-                downloadBrandedPart(s3Client, s3Object, brandedProductRepository, semaphore);
+                downloadBrandedPart(s3Client, s3Object, brandedProductRepository, lock);
             }
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
     }
 
-    private void downloadBrandedPart(S3Client s3Client, S3Object s3Object, BrandedProductRepository brandedProductRepository, Semaphore semaphore) throws InterruptedException {
+    private void downloadBrandedPart(S3Client s3Client, S3Object s3Object, BrandedProductRepository brandedProductRepository, Lock lock) throws InterruptedException {
         try (ResponseInputStream<GetObjectResponse> inputStream =  s3Client.getObject(GetObjectRequest.builder().bucket(BUCKET).key(s3Object.key()).build())){
             ObjectMapper objectMapper = new ObjectMapper();
             Scanner scanner = new Scanner(inputStream);
@@ -71,26 +78,26 @@ public class AwsS3Service {
                     logger.warn("Unable to parse line {}", json);
                     continue;
                 }
-                semaphore.acquire();
+                lock.lock();
                 brandedProductRepository.save(brandedProduct);
-                semaphore.release();
+                lock.unlock();
 
             }
-        } catch (InterruptedException e) {
-            throw e;
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
-    }
+        logger.info("Successfully processed {}", s3Object.key());
 
-    public void downloadRaw(RawProductRepository rawProductRepository, Semaphore semaphore) throws InterruptedException {
+    }
+    @Async
+    public void downloadRaw(RawProductRepository rawProductRepository, Lock lock) throws InterruptedException {
 
         try (S3Client s3Client = S3Client.builder().credentialsProvider(awsCredentialsProvider).region(Region.US_EAST_1).build();
              ResponseInputStream<GetObjectResponse> inputStream =  s3Client.getObject(GetObjectRequest.builder().bucket(BUCKET).key(FOUNDATION).build())){
             ObjectMapper objectMapper = new ObjectMapper();
             Scanner scanner = new Scanner(inputStream);
             String json;
-            RawProduct rawProduct = null;
+            RawProduct rawProduct;
             while (scanner.hasNextLine()){
                 json = scanner.nextLine();
                 if (json.length() < 50) {
@@ -102,16 +109,16 @@ public class AwsS3Service {
                     logger.warn("Unable to parse line {}", json);
                     continue;
                 }
-                semaphore.acquire();
+                lock.lock();
                 rawProductRepository.save(rawProduct);
-                semaphore.release();
+                lock.unlock();
 
             }
-        } catch (InterruptedException e) {
-            throw e;
         } catch (Exception e) {
+            logger.warn("Failed to finish update raw database");
             throw new RuntimeException(e);
         }
+        logger.info("Successfully updated raw database");
     }
 
 }

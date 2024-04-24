@@ -5,6 +5,7 @@ import edu.kennesaw.POJO.Product;
 import edu.kennesaw.components.AwsS3Service;
 import edu.kennesaw.components.StartupService;
 import edu.kennesaw.records.Barcode;
+import edu.kennesaw.records.Position;
 import edu.kennesaw.records.Query;
 import edu.kennesaw.repositories.BrandedProductRepository;
 import edu.kennesaw.repositories.RawProductRepository;
@@ -19,6 +20,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 
 @RestController
@@ -26,6 +29,8 @@ public class RedNutritionController {
 
     Semaphore rawSemaphore = new Semaphore(1, true);
     Semaphore brandedSemaphore = new Semaphore(1, true);
+    ReentrantReadWriteLock rawLock = new ReentrantReadWriteLock();
+    ReentrantReadWriteLock brandedLock = new ReentrantReadWriteLock();
 
     @Autowired
     StartupService startupService;
@@ -58,31 +63,29 @@ public class RedNutritionController {
     @PostMapping("/updateRawDatabase")
     public void updateRawDatabase() throws InterruptedException {
         logger.info("Raw database update requested");
-        long start = System.nanoTime();
-        awsS3Service.downloadRaw(rawProductRepository, rawSemaphore);
-        long time = System.nanoTime() - start;
-        logger.info("Raw database update completed in {} seconds", time / 1_000_000_000);
+        awsS3Service.downloadRaw(rawProductRepository, rawLock.writeLock());
+        logger.info("Raw database update running async");
     }
 
-    @PostMapping("/updateBrandedDatabase")
-    public void updateBrandedDatabase() throws InterruptedException {
+    @PostMapping(value = "/updateBrandedDatabase", consumes = {MediaType.APPLICATION_JSON_VALUE})
+    public void updateBrandedDatabase(@RequestBody Position position) throws InterruptedException {
         logger.info("Branded database update requested");
-        long start = System.nanoTime();
-        awsS3Service.downloadBranded(brandedProductRepository, brandedSemaphore);
-        long time = System.nanoTime() - start;
-        logger.info("Branded database update completed in {} seconds", time / 1_000_000_000);
+        awsS3Service.downloadBranded(brandedProductRepository, brandedLock.writeLock(), position.position());
+        logger.info("Branded database update running async");
     }
 
     @PostMapping(value = "/query", consumes = {MediaType.APPLICATION_JSON_VALUE})
     public  List<? extends Product> query(@RequestBody Query query) throws InterruptedException {
         logger.info("Requested product with keywords: {}", query.keywords());
-        rawSemaphore.acquire();
+        ReentrantReadWriteLock.ReadLock lock = rawLock.readLock();
+        lock.lock();
         List<Product> products = new ArrayList<>(rawProductRepository.search(query));
-        rawSemaphore.release();
+        lock.unlock();
         logger.info("Found {} raw products with keywords: {}", products.size(), query.keywords());
-        brandedSemaphore.acquire();
+        lock = brandedLock.readLock();
+        lock.lock();
         products.addAll(brandedProductRepository.search(query));
-        brandedSemaphore.release();
+        lock.unlock();
         logger.info("Found {} total products with keywords: {}", products.size(), query.keywords());
         return products;
     }
@@ -90,9 +93,10 @@ public class RedNutritionController {
     @PostMapping(value = "/barcode", consumes = {MediaType.APPLICATION_JSON_VALUE})
     public ResponseEntity<BrandedProduct> query(@RequestBody Barcode barcode) throws InterruptedException {
         logger.info("Requested product with barcode: {}", barcode.barcode());
-        brandedSemaphore.acquire();
+        ReentrantReadWriteLock.ReadLock lock = brandedLock.readLock();
+        lock.lock();
         Optional<BrandedProduct> brandedProductOptional = brandedProductRepository.findByGtinUpc(barcode.barcode());
-        brandedSemaphore.release();
+        lock.unlock();
         logger.info("Barcode {} was {}", barcode.barcode(), brandedProductOptional.isPresent() ? "found" : "not found");
         return ResponseEntity.of(brandedProductOptional);
     }
