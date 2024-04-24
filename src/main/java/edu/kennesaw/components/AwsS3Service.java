@@ -10,6 +10,7 @@ import edu.kennesaw.repositories.RawProductRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataAccessException;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import software.amazon.awssdk.auth.credentials.*;
@@ -82,7 +83,11 @@ public class AwsS3Service {
                     continue;
                 }
                 lock.lock();
-                brandedProductRepository.saveAll(brandedProducts);
+                try {
+                    brandedProductRepository.saveAll(brandedProducts);
+                } catch (DataAccessException e) {
+                    logger.warn("Skipping insert because of DataAccess Exception with message: {}", e.getMessage());
+                }
                 lock.unlock();
                 brandedProducts.clear();
 
@@ -91,7 +96,11 @@ public class AwsS3Service {
             throw new RuntimeException(e);
         }
         lock.lock();
-        brandedProductRepository.saveAll(brandedProducts);
+        try {
+            brandedProductRepository.saveAll(brandedProducts);
+        } catch (DataAccessException e) {
+            logger.warn("Skipping insert because of DataAccess Exception with message: {}", e.getMessage());
+        }
         lock.unlock();
         logger.info("Successfully processed {}", s3Object.key());
     }
