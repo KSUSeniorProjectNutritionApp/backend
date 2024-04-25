@@ -20,7 +20,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.Semaphore;
-import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 
@@ -77,15 +77,17 @@ public class RedNutritionController {
     @PostMapping(value = "/query", consumes = {MediaType.APPLICATION_JSON_VALUE})
     public  List<? extends Product> query(@RequestBody Query query) throws InterruptedException {
         logger.info("Requested product with keywords: {}", query.keywords());
-        ReentrantReadWriteLock.ReadLock lock = rawLock.readLock();
+        Lock lock = brandedLock.readLock();
         lock.lock();
-        List<Product> products = new ArrayList<>(rawProductRepository.search(query));
+        List<Product> products = new ArrayList<>(brandedProductRepository.search(query));
         lock.unlock();
-        logger.info("Found {} raw products with keywords: {}", products.size(), query.keywords());
-        lock = brandedLock.readLock();
-        lock.lock();
-        products.addAll(brandedProductRepository.search(query));
-        lock.unlock();
+        logger.info("Found {} branded products with keywords: {}", products.size(), query.keywords());
+        if (products.size() < query.hits()) {
+            lock = rawLock.readLock();
+            lock.lock();
+            products.addAll(rawProductRepository.search(new Query(query.keywords(), query.hits() - products.size())));
+            lock.unlock();
+        }
         logger.info("Found {} total products with keywords: {}", products.size(), query.keywords());
         return products;
     }
