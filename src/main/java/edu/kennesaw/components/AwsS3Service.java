@@ -46,15 +46,19 @@ public class AwsS3Service {
             ListObjectsV2Response listObjectsV2Response = s3Client.listObjectsV2(ListObjectsV2Request.builder().bucket(BUCKET).prefix(BRANDED).build());
             List<S3Object> s3Objects = listObjectsV2Response.contents();
             S3Object s3Object;
+            int total = s3Objects.size() - position -1;
+            int start = position;
             for(; position <= s3Objects.size(); position++){
                 s3Object = s3Objects.get(position);
                 if(s3Object.key().equals(BRANDED)) {
                     logger.info("Skipping directory prefix {}", s3Object.key());
+                    continue;
                 } else {
-                    logger.info("Processing file {}", s3Object.key());
+                    logger.info("Processing file {}: num {}/{}", s3Object.key(), position - start + 1,total);
                 }
                 downloadBrandedPart(s3Client, s3Object, brandedProductRepository, lock);
             }
+            logger.info("Completed processing branded files {}-{}",start,s3Objects.size()-1);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
