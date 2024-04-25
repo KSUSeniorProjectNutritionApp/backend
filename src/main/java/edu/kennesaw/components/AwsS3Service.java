@@ -89,6 +89,7 @@ public class AwsS3Service {
                 lock.lock();
                 try {
                     brandedProductRepository.saveAll(brandedProducts);
+                    logger.info("Dumped cache into DB");
                 } catch (DataAccessException e) {
                     logger.warn("Skipping insert because of DataAccess Exception with message: {}", e.getMessage());
                 }
